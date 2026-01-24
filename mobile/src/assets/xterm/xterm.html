@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ClaudeSync Terminal</title>
+
+  <!-- xterm.js CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+
+  <style>
+    /* 全体のスタイル */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #1e1e1e;
+    }
+
+    /* ターミナルコンテナ */
+    #terminal-container {
+      width: 100%;
+      height: 100%;
+      padding: 4px;
+    }
+
+    /* xtermのスタイル調整 */
+    .xterm {
+      height: 100%;
+    }
+
+    .xterm-viewport {
+      overflow-y: auto !important;
+    }
+
+    /* スクロールバーのスタイル */
+    .xterm-viewport::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .xterm-viewport::-webkit-scrollbar-track {
+      background: #1e1e1e;
+    }
+
+    .xterm-viewport::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+
+    .xterm-viewport::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal-container"></div>
+
+  <script>
+    /**
+     * ClaudeSync ターミナル
+     *
+     * React Nativeから制御されるxterm.jsターミナル
+     * WebViewを通じてメッセージをやり取り
+     */
+
+    // ターミナルインスタンス
+    let terminal = null;
+    let fitAddon = null;
+
+    // 設定（React Nativeから更新可能）
+    let config = {
+      fontSize: 14,
+      theme: 'dark',
+    };
+
+    // ダークテーマ
+    const darkTheme = {
+      background: '#1e1e1e',
+      foreground: '#d4d4d4',
+      cursor: '#d4d4d4',
+      cursorAccent: '#1e1e1e',
+      selection: 'rgba(255, 255, 255, 0.3)',
+      black: '#000000',
+      red: '#cd3131',
+      green: '#0dbc79',
+      yellow: '#e5e510',
+      blue: '#2472c8',
+      magenta: '#bc3fbc',
+      cyan: '#11a8cd',
+      white: '#e5e5e5',
+      brightBlack: '#666666',
+      brightRed: '#f14c4c',
+      brightGreen: '#23d18b',
+      brightYellow: '#f5f543',
+      brightBlue: '#3b8eea',
+      brightMagenta: '#d670d6',
+      brightCyan: '#29b8db',
+      brightWhite: '#e5e5e5',
+    };
+
+    // ライトテーマ
+    const lightTheme = {
+      background: '#ffffff',
+      foreground: '#333333',
+      cursor: '#333333',
+      cursorAccent: '#ffffff',
+      selection: 'rgba(0, 0, 0, 0.3)',
+      black: '#000000',
+      red: '#cd3131',
+      green: '#00bc00',
+      yellow: '#949800',
+      blue: '#0451a5',
+      magenta: '#bc05bc',
+      cyan: '#0598bc',
+      white: '#555555',
+      brightBlack: '#666666',
+      brightRed: '#cd3131',
+      brightGreen: '#14ce14',
+      brightYellow: '#b5ba00',
+      brightBlue: '#0451a5',
+      brightMagenta: '#bc05bc',
+      brightCyan: '#0598bc',
+      brightWhite: '#a5a5a5',
+    };
+
+    /**
+     * ターミナルを初期化
+     */
+    function initTerminal() {
+      // コンテナを取得
+      const container = document.getElementById('terminal-container');
+
+      // ターミナルを作成
+      terminal = new Terminal({
+        fontSize: config.fontSize,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        theme: config.theme === 'dark' ? darkTheme : lightTheme,
+        cursorBlink: true,
+        cursorStyle: 'block',
+        scrollback: 5000,
+        allowProposedApi: true,
+        convertEol: true,
+      });
+
+      // アドオンを追加
+      fitAddon = new FitAddon.FitAddon();
+      terminal.loadAddon(fitAddon);
+
+      const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+      terminal.loadAddon(webLinksAddon);
+
+      // ターミナルをコンテナにアタッチ
+      terminal.open(container);
+
+      // サイズを調整
+      fitAddon.fit();
+
+      // 入力イベントをReact Nativeに送信
+      terminal.onData((data) => {
+        sendToReactNative('input', { data });
+      });
+
+      // リサイズイベントをReact Nativeに送信
+      terminal.onResize(({ cols, rows }) => {
+        sendToReactNative('resize', { cols, rows });
+      });
+
+      // 初期サイズを通知
+      setTimeout(() => {
+        fitAddon.fit();
+        const { cols, rows } = terminal;
+        sendToReactNative('ready', { cols, rows });
+      }, 100);
+
+      // ウィンドウリサイズ時に再調整
+      window.addEventListener('resize', () => {
+        if (fitAddon) {
+          fitAddon.fit();
+        }
+      });
+    }
+
+    /**
+     * React Nativeにメッセージを送信
+     */
+    function sendToReactNative(type, payload) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type, payload }));
+      }
+    }
+
+    /**
+     * React Nativeからのメッセージを処理
+     */
+    function handleMessage(event) {
+      try {
+        const message = JSON.parse(event.data);
+        const { type, payload } = message;
+
+        switch (type) {
+          case 'write':
+            // ターミナルに出力
+            if (terminal && payload.data) {
+              terminal.write(payload.data);
+            }
+            break;
+
+          case 'clear':
+            // ターミナルをクリア
+            if (terminal) {
+              terminal.clear();
+            }
+            break;
+
+          case 'reset':
+            // ターミナルをリセット
+            if (terminal) {
+              terminal.reset();
+            }
+            break;
+
+          case 'resize':
+            // サイズを変更
+            if (fitAddon) {
+              fitAddon.fit();
+            }
+            break;
+
+          case 'config':
+            // 設定を更新
+            updateConfig(payload);
+            break;
+
+          case 'focus':
+            // フォーカスを設定
+            if (terminal) {
+              terminal.focus();
+            }
+            break;
+
+          case 'blur':
+            // フォーカスを解除
+            if (terminal) {
+              terminal.blur();
+            }
+            break;
+        }
+      } catch (error) {
+        console.error('メッセージ処理エラー:', error);
+      }
+    }
+
+    /**
+     * 設定を更新
+     */
+    function updateConfig(newConfig) {
+      if (newConfig.fontSize && newConfig.fontSize !== config.fontSize) {
+        config.fontSize = newConfig.fontSize;
+        if (terminal) {
+          terminal.options.fontSize = config.fontSize;
+          if (fitAddon) {
+            fitAddon.fit();
+          }
+        }
+      }
+
+      if (newConfig.theme && newConfig.theme !== config.theme) {
+        config.theme = newConfig.theme;
+        if (terminal) {
+          terminal.options.theme = config.theme === 'dark' ? darkTheme : lightTheme;
+        }
+      }
+    }
+
+    // メッセージリスナーを設定
+    window.addEventListener('message', handleMessage);
+    document.addEventListener('message', handleMessage);
+
+    // ターミナルを初期化
+    document.addEventListener('DOMContentLoaded', initTerminal);
+
+    // DOMContentLoadedが既に発火している場合
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      initTerminal();
+    }
+  </script>
+</body>
+</html>
