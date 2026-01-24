@@ -1,0 +1,33 @@
+{
+  "name": "claudesync-mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "expo lint"
+  },
+  "dependencies": {
+    "expo": "~52.0.0",
+    "expo-router": "~4.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.3",
+    "react-native-webview": "13.12.5",
+    "react-native-safe-area-context": "4.14.0",
+    "react-native-screens": "~4.4.0",
+    "react-native-gesture-handler": "~2.20.0",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "zustand": "^4.5.0",
+    "expo-haptics": "~14.0.0",
+    "expo-notifications": "~0.29.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/react": "~18.3.0",
+    "typescript": "~5.3.0"
+  },
+  "private": true
+}

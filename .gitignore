@@ -1,0 +1,36 @@
+# 依存関係
+node_modules/
+.pnpm-store/
+
+# ビルド成果物
+dist/
+build/
+.expo/
+
+# 環境変数
+.env
+.env.local
+.env.*.local
+
+# データファイル
+server/data/
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ログ
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# テスト
+coverage/
+
+# キャッシュ
+.cache/
+*.tsbuildinfo
