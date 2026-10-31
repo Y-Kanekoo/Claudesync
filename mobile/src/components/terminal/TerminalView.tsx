@@ -164,8 +164,6 @@ export const TerminalView = forwardRef<TerminalViewRef, TerminalViewProps>(
           bounces={false}
           // ズームを無効化
           scalesPageToFit={false}
-          // 背景色を設定
-          backgroundColor={theme === 'dark' ? '#1e1e1e' : '#ffffff'}
           // セキュリティ設定
           allowFileAccess={false}
           allowUniversalAccessFromFileURLs={false}
